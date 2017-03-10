@@ -90,7 +90,7 @@ char charNotes[43];
     for (int octave=0; octave < 6; octave++) {
         for (int majorNote=0; majorNote < 7; majorNote++) {
             int noteIndex = octave*7+majorNote;
-            int noteValue = majorscale[majorNote] + 12*octave + 32;
+            int noteValue = majorscale[majorNote] + 12*octave + 36;
             allNotes[noteIndex] = noteValue;
             charNotes[noteIndex] = majorscale_char[majorNote];
             printf("\nNote index %2d, MIDI note %3d, pitch %c, scale note %d", noteIndex, noteValue, charNotes[noteIndex], majorNote);
