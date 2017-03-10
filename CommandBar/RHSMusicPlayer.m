@@ -74,12 +74,33 @@ enum {
     kMidiMessage_NoteOn 			= 0x9
 };
 
+int majorscale[] = {0, 2, 4, 5, 7, 9, 11};
+char majorscale_char[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 0 };
+int allNotes[42];
+char charNotes[43];
 
 @implementation RHSMusicPlayer
 
 - (id) init {
     self = [super init];
     [self setupMidi];
+
+    // 6 octaves, 7 major notes per octave = 42 notes
+    // third octave = middle C, MIDI note 60
+    for (int octave=0; octave < 6; octave++) {
+        for (int majorNote=0; majorNote < 7; majorNote++) {
+            int noteIndex = octave*7+majorNote;
+            int noteValue = majorscale[majorNote] + 12*octave + 32;
+            allNotes[noteIndex] = noteValue;
+            charNotes[noteIndex] = majorscale_char[majorNote];
+            printf("\nNote index %2d, MIDI note %3d, pitch %c, scale note %d", noteIndex, noteValue, charNotes[noteIndex], majorNote);
+            printf("");
+            
+        }
+    }
+    charNotes[42] = 0;
+    printf("\n\n");
+    fflush(stdout);
     return self;
 }
 AUGraph graph = 0;
@@ -184,20 +205,8 @@ home:
     if (fraction > 1.0) fraction = 1.0;
     if (fraction < 0.0) fraction = 0.0;
     
-    int majorscale[] = {0, 2, 4, 5, 7, 9, 11};
-    // 6 octaves, 7 major notes per octave = 42 notes
-    // third octave = middle C, MIDI note 60
-    int allNotes[42];
-    for (int octave=0; octave < 6; octave++) {
-        for (int majorNote=0; majorNote < 7; majorNote++) {
-            int noteIndex = octave*7+majorNote;
-            int noteValue = majorscale[majorNote] + 7*octave + 37;
-            allNotes[noteIndex] = noteValue;
-//            NSLog(@"allNotes[%d] = %d", noteIndex, noteValue);
-        }
-    }
     int noteIndex = 42 * fraction;
-    NSLog(@"Fraction %f -> note index %d -> note %d", fraction, noteIndex, allNotes[noteIndex]);
+    NSLog(@"Fraction %f -> note index %d -> note %d (%c)", fraction, noteIndex, allNotes[noteIndex], charNotes[noteIndex]);
     [self playNote:allNotes[noteIndex]];
 }
 
