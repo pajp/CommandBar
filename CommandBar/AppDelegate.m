@@ -7,18 +7,31 @@
 //
 
 #import "AppDelegate.h"
+#import "RHSMusicPlayer.h"
+#import "RHSCommandWindow.h"
 
 @interface AppDelegate ()
 
-@property (weak) IBOutlet NSWindow *window;
+@property (weak) IBOutlet RHSCommandWindow *window;
 @end
 
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-    // Insert code here to initialize your application
+
 }
 
+
+- (NSMenu*) applicationDockMenu:(NSApplication *)sender {
+    NSMenu* menu = [[NSMenu alloc] init];
+    [menu addItem:[[NSMenuItem alloc] initWithTitle:@"Hello" action:nil keyEquivalent:@""]];
+    [menu addItem:[[NSMenuItem alloc] initWithTitle:@"World" action:nil keyEquivalent:@""]];
+    return menu;
+}
+
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
+    return YES;
+}
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     // Insert code here to tear down your application
