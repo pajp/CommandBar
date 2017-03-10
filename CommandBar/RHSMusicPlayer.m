@@ -71,7 +71,8 @@ enum {
     kMidiMessage_ProgramChange 		= 0xC,
     kMidiMessage_BankMSBControl 	= 0,
     kMidiMessage_BankLSBControl		= 32,
-    kMidiMessage_NoteOn 			= 0x9
+    kMidiMessage_NoteOn 			= 0x9,
+    kMidiMessage_NoteOff            = 0x8
 };
 
 int majorscale[] = {0, 2, 4, 5, 7, 9, 11};
@@ -164,14 +165,17 @@ home:
     OSStatus result = 0;
 
     UInt32 onVelocity = 127;
-    UInt32 noteOnCommand = 	kMidiMessage_NoteOn << 4 | midiChannelInUse;
+    UInt32 noteOnCommand  = kMidiMessage_NoteOn << 4 | midiChannelInUse;
+    UInt32 noteOffCommand = kMidiMessage_NoteOff << 4 | midiChannelInUse;
     
     NSLog (@"Playing Note: Status: 0x%X Note: %u, Vel: %u\n", (unsigned int)noteOnCommand, (unsigned int)noteNum, (unsigned int)onVelocity);
     
     _rhs_require_noerr (result = MusicDeviceMIDIEvent(synthUnit, noteOnCommand, noteNum, onVelocity, 0), home);
 
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        OSStatus _result = MusicDeviceMIDIEvent(synthUnit, noteOnCommand, noteNum, 0, 0);
+    // turn off note after n seconds. If the same note is played several times before n seconds has elapsed
+    // the note off command is still sent after n seconds, which will cause inconsistent sustain
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        OSStatus _result = MusicDeviceMIDIEvent(synthUnit, noteOffCommand, noteNum, 0, 0);
         if (_result != 0) {
             NSLog(@"%s: OSStatus %d", __func__, result);
         }
