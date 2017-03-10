@@ -79,11 +79,16 @@ int majorscale[] = {0, 2, 4, 5, 7, 9, 11};
 char majorscale_char[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 0 };
 int allNotes[42];
 char charNotes[43];
+NSMutableDictionary* notesBeingPlayed;
+NSMutableSet* cancelledNoteOffs;;
 
 @implementation RHSMusicPlayer
 
+
 - (id) init {
     self = [super init];
+    notesBeingPlayed = [[NSMutableDictionary alloc] init];
+    cancelledNoteOffs = [[NSMutableSet alloc] init];
     [self setupMidi];
 
     // 6 octaves, 7 major notes per octave = 42 notes
@@ -161,7 +166,10 @@ home:
     return result;
 }
 
+int notePlayCount;
 - (void) playNote:(int) noteNum {
+    assert([NSThread isMainThread]);
+    notePlayCount++;
     OSStatus result = 0;
 
     UInt32 onVelocity = 127;
@@ -171,14 +179,29 @@ home:
     NSLog (@"Playing Note: Status: 0x%X Note: %u, Vel: %u\n", (unsigned int)noteOnCommand, (unsigned int)noteNum, (unsigned int)onVelocity);
     
     _rhs_require_noerr (result = MusicDeviceMIDIEvent(synthUnit, noteOnCommand, noteNum, onVelocity, 0), home);
-
-    // turn off note after n seconds. If the same note is played several times before n seconds has elapsed
-    // the note off command is still sent after n seconds, which will cause inconsistent sustain
+    
+    if (notesBeingPlayed[@(noteNum)] != nil) {
+        [cancelledNoteOffs addObject:notesBeingPlayed[@(noteNum)]];
+        NSLog(@"%s: will add cancellation for note-off for note %d count %d, cancelled by count %d", __func__, noteNum, [notesBeingPlayed[@(noteNum)] intValue], notePlayCount);
+    }
+    notesBeingPlayed[@( noteNum )] = @(notePlayCount);
+    
+    int noteOffCount = notePlayCount;
+    
+    // turn off note after n seconds, unless the note off has been cancelled by the same note being played again
+    // before
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if ([cancelledNoteOffs containsObject:@(noteOffCount)]) {
+            NSLog(@"%s: cancelling note-off %d, count %d", __func__, noteNum, noteOffCount);
+            [cancelledNoteOffs removeObject:@(noteOffCount)];
+            return;
+        }
+        NSLog(@"%s note-off for note %d count %d", __func__, noteNum, noteOffCount);
         OSStatus _result = MusicDeviceMIDIEvent(synthUnit, noteOffCommand, noteNum, 0, 0);
         if (_result != 0) {
             NSLog(@"%s: OSStatus %d", __func__, result);
         }
+        [notesBeingPlayed removeObjectForKey:@( noteNum )];
     });
 home:
     if (result != 0) {
