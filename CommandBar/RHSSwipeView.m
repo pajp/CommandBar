@@ -9,6 +9,9 @@
 #import "RHSSwipeView.h"
 #import <QuartzCore/QuartzCore.h>
 
+@interface RHSSwipeView()
+@end
+
 @implementation RHSSwipeView
 
 NSMutableSet* balls;
@@ -37,6 +40,12 @@ NSMutableSet* balls;
     });
 }
 
+- (void)setSegmentCount:(NSUInteger)segmentCount {
+    _segmentCount = segmentCount;
+    self.needsDisplay = YES;
+    NSLog(@"New segment count: %lu", (unsigned long)_segmentCount);
+}
+
 - (BOOL)acceptsFirstResponder
 {
     return YES;
@@ -49,7 +58,17 @@ NSMutableSet* balls;
     NSBezierPath* p = [NSBezierPath bezierPathWithRoundedRect:NSMakeRect(0, 0, self.bounds.size.width, self.bounds.size.height) xRadius:4 yRadius:4];
     
     [p stroke];
-//    
+    
+    double segmentWidth = self.bounds.size.width / self.segmentCount;
+    [[[NSColor whiteColor] colorWithAlphaComponent:0.2] setStroke];
+    for (int i=0; i < self.segmentCount; i++) {
+        p = [NSBezierPath bezierPath];
+        [p moveToPoint:NSMakePoint(i*segmentWidth, 0)];
+        [p lineToPoint:NSMakePoint(i*segmentWidth, self.bounds.size.height)];
+        [p stroke];
+//        NSLog(@"path %@", p);
+    }
+//
 //    for (NSValue* obj in balls) {
 //        NSPoint ballLocation = [obj pointValue];
 //        p = [NSBezierPath bezierPathWithOvalInRect:NSMakeRect(ballLocation.x-5, self.bounds.size.height/2-5, 10, 10)];

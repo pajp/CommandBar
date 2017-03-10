@@ -10,7 +10,7 @@
 #import "RHSBallView.h"
 
 @interface RHSSwipeView : NSView
-
+@property (nonatomic) NSUInteger segmentCount;
 @property CGPoint ballLocation;
 @property BOOL isAnimating;
 

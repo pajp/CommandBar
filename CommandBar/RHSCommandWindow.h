@@ -10,7 +10,7 @@
 #import "RHSSwipeView.h"
 #import "RHSMusicPlayer.h"
 
-@interface RHSCommandWindow : NSWindow <NSTouchBarDelegate>
+@interface RHSCommandWindow : NSWindow <NSTouchBarDelegate, NSScrubberDataSource, NSScrubberDelegate>
 @property RHSSwipeView* swipeView;
 @property (weak) IBOutlet RHSSwipeView *swipeViewOnScreen;
 @property RHSMusicPlayer* musicPlayer;

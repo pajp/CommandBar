@@ -11,25 +11,36 @@
 
 @implementation RHSCommandWindow
 
+NSArray* keys;
+NSArray* scales;
 - (id) initWithContentRect:(NSRect)contentRect styleMask:(NSWindowStyleMask)style backing:(NSBackingStoreType)bufferingType defer:(BOOL)flag {
     self = [super initWithContentRect:contentRect styleMask:style backing:bufferingType defer:flag];
     self.musicPlayer = [RHSMusicPlayer new];
+    keys = @[ @"c", @"d", @"e", @"f", @"g", @"a", @"b" ];
+    scales = self.musicPlayer.scales.allKeys;
     return self;
 }
 
 NSString* commandBarIdentifier = @"nu.dll.CommandBar";
 NSString* switcherIdentifier = @"nu.dll.KeySwitcher";
 NSTouchBar* keySelectionTouchBar = nil;
+NSTouchBar* advKeySelectionTouchBar = nil;
 NSPopoverTouchBarItem* keySelectPopover = nil;
+NSPopoverTouchBarItem* advKeySelectPopover = nil;
 
 - (NSTouchBar*) makeTouchBar {
     NSTouchBar* touchBar = [[NSTouchBar alloc] init];
     touchBar.delegate = self;
     touchBar.customizationIdentifier = commandBarIdentifier;
-    touchBar.defaultItemIdentifiers = @[ commandBarIdentifier, switcherIdentifier, NSTouchBarItemIdentifierOtherItemsProxy ];
+    touchBar.defaultItemIdentifiers = @[ commandBarIdentifier, @"adv-keyselect", switcherIdentifier, NSTouchBarItemIdentifierOtherItemsProxy ];
     touchBar.customizationAllowedItemIdentifiers = @[ commandBarIdentifier ];
-    touchBar.principalItemIdentifier = commandBarIdentifier;
+//    touchBar.principalItemIdentifier = commandBarIdentifier;
     return touchBar;
+}
+
+- (void) updateSegmentCount {
+    self.swipeViewOnScreen.segmentCount = self.musicPlayer.allNotes.count;
+    self.swipeView.segmentCount = self.musicPlayer.allNotes.count;
 }
 
 - (void) cancelOperation:(id)sender {
@@ -39,10 +50,17 @@ NSPopoverTouchBarItem* keySelectPopover = nil;
 - (NSTouchBar*) makeKeySelectionTouchBar {
     keySelectionTouchBar = [[NSTouchBar alloc] init];
     keySelectionTouchBar.delegate = self;
-    keySelectionTouchBar.defaultItemIdentifiers = @[ @"c-maj", @"d-maj", @"d-min", @"e-maj", @"e-min", @"g-maj", @"c-blues" ];
-    //keySelectionTouchBar.principalItemIdentifier = keySelectionTouchBar.defaultItemIdentifiers[0];
+    keySelectionTouchBar.defaultItemIdentifiers = @[ @"c-maj", @"d-maj", @"d-min", @"e-maj", @"g-maj", @"c-blues" ];
     return keySelectionTouchBar;
 }
+
+- (NSTouchBar*) makeAdvKeySelectionTouchBar {
+    advKeySelectionTouchBar = [[NSTouchBar alloc] init];
+    advKeySelectionTouchBar.delegate = self;
+    advKeySelectionTouchBar.defaultItemIdentifiers = @[ @"key-select", @"scale-select" ];
+    return advKeySelectionTouchBar;
+}
+
 
 - (NSTouchBarItem*) makeSwitcherItem {
     NSPopoverTouchBarItem* item = [[NSPopoverTouchBarItem alloc] initWithIdentifier:switcherIdentifier];
@@ -52,11 +70,82 @@ NSPopoverTouchBarItem* keySelectPopover = nil;
     return item;
 }
 
+- (NSTouchBarItem*) makeAdvSwitcherItem {
+    NSPopoverTouchBarItem* item = [[NSPopoverTouchBarItem alloc] initWithIdentifier:@"adv-keyselect"];
+    item.popoverTouchBar = [self makeAdvKeySelectionTouchBar];
+    item.collapsedRepresentationLabel = @"🎼";
+    advKeySelectPopover = item;
+    return item;
+}
+
+
 - (void) performKeyChange:(NSButton*) sender {
     NSLog(@"Should change key to: %@", sender.title);
     [self.musicPlayer setScale:sender.title];
     [keySelectPopover dismissPopover:sender];
+    [self updateSegmentCount];
 }
+
+NSScrubber* keySelectScrubber;
+NSScrubber* scaleSelectScrubber;
+
+- (NSInteger)numberOfItemsForScrubber:(NSScrubber *)scrubber {
+    if (scrubber == keySelectScrubber) {
+        assert(keys);
+        return keys.count;
+    }
+    if (scrubber == scaleSelectScrubber) {
+        return self.musicPlayer.scales.allKeys.count;
+    }
+    assert(false);
+}
+
+- (__kindof NSScrubberItemView *)scrubber:(NSScrubber *)scrubber viewForItemAtIndex:(NSInteger)index {
+    NSScrubberTextItemView* view = [[NSScrubberTextItemView alloc] init];
+    if (scrubber == keySelectScrubber) {
+        view.title = keys[index];
+    }
+    if (scrubber == scaleSelectScrubber) {
+        view.title = scales[index];
+    }
+    return view;
+    
+}
+
+- (void)scrubber:(NSScrubber *)scrubber didSelectItemAtIndex:(NSInteger)selectedIndex {
+    NSLog(@"%s: %ld", __func__, (long)selectedIndex);
+    long keyIndex = keySelectScrubber.selectedIndex;
+    long scaleIndex = scaleSelectScrubber.selectedIndex;
+    if (keyIndex < 0) keyIndex = 0;
+    if (scaleIndex < 0) scaleIndex = 0;
+    NSString* key = keys[keyIndex];
+    NSString* scale = scales[scaleIndex];
+    NSString* keyScale = [NSString stringWithFormat:@"%@-%@", key, scale];
+    [self.musicPlayer setScale:keyScale];
+    [self updateSegmentCount];
+}
+
+- (NSTouchBarItem*) makeAdvKeySelectionTouchBarItemForIdentifier:(NSTouchBarItemIdentifier)identifier {
+    NSCustomTouchBarItem* item = nil;
+    item = [[NSCustomTouchBarItem alloc] initWithIdentifier:identifier];
+    NSScrubber* scrubber = [[NSScrubber alloc] init];
+    item.view = scrubber;
+    scrubber.showsAdditionalContentIndicators = YES;
+//    scrubber.floatsSelectionViews = YES;
+    scrubber.mode = NSScrubberModeFree;
+    scrubber.selectedIndex = 0;
+    scrubber.dataSource = self;
+    scrubber.delegate = self;
+    scrubber.selectionBackgroundStyle = [NSScrubberSelectionStyle outlineOverlayStyle];
+    if ([identifier isEqualToString:@"key-select"]) {
+        keySelectScrubber = scrubber;
+    }
+    if ([identifier isEqualToString:@"scale-select"]) {
+        scaleSelectScrubber = scrubber;
+    }
+    return item;
+}
+
 
 - (NSTouchBarItem*) makeKeySelectionTouchBarItemForIdentifier:(NSTouchBarItemIdentifier)identifier {
     NSCustomTouchBarItem* item = [[NSCustomTouchBarItem alloc] initWithIdentifier:identifier];
@@ -67,8 +156,14 @@ NSPopoverTouchBarItem* keySelectPopover = nil;
 }
 
 - (NSTouchBarItem*) touchBar:(NSTouchBar *)touchBar makeItemForIdentifier:(NSTouchBarItemIdentifier)identifier {
+    if ([identifier isEqualToString:@"adv-keyselect"]) {
+        return [self makeAdvSwitcherItem];
+    }
     if (touchBar == keySelectionTouchBar) {
         return [self makeKeySelectionTouchBarItemForIdentifier:identifier];
+    }
+    if (touchBar == advKeySelectionTouchBar) {
+        return [self makeAdvKeySelectionTouchBarItemForIdentifier:identifier];
     }
     if ([identifier isEqualToString:switcherIdentifier]) {
         return [self makeSwitcherItem];
@@ -77,6 +172,7 @@ NSPopoverTouchBarItem* keySelectPopover = nil;
     self.swipeView = [[RHSSwipeView alloc] init];
     item.view = self.swipeView;
     self.swipeView.wantsLayer = YES;
+    [self updateSegmentCount];
 
 
     // This is for pan gesture recognizer to work.

@@ -9,6 +9,8 @@
 #import <Foundation/Foundation.h>
 
 @interface RHSMusicPlayer : NSObject
+@property NSDictionary* scales;
+@property NSMutableArray* allNotes;
 - (void) playMusic;
 - (void) playNote:(int) noteNum;
 - (void) playScaleNoteFromFraction:(float) fraction;

@@ -80,16 +80,15 @@ char majorscale_char[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 0 };
 @interface RHSMusicPlayer()
 @property NSMutableDictionary* notesBeingPlayed;
 @property NSMutableSet* cancelledNoteOffs;
-@property NSDictionary* scales;
-@property NSMutableArray* allNotes;
 @end
 
 @implementation RHSMusicPlayer
 
 - (NSArray*) scale:(NSString*) scaleName forKey:(char) key {
     int keyOffset = 0;
-    for (;keyOffset < sizeof(majorscale_char) && majorscale_char[keyOffset] == key; ++keyOffset);
-    keyOffset--;
+    while (keyOffset < sizeof(majorscale_char) && majorscale_char[keyOffset] != key) {
+        keyOffset++;
+    }
     NSArray* scaleReference = self.scales[scaleName];
     NSMutableArray* scale = [[NSMutableArray alloc] initWithCapacity:scaleReference.count];
     [scaleReference enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
