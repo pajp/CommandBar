@@ -30,7 +30,7 @@ OSStatus	CreateAUGraph (AUGraph* outGraph, AudioUnit* outSynth)
 {
     OSStatus result;
     //create the nodes of the graph
-    AUNode synthNode, limiterNode, outNode;
+    AUNode synthNode, outNode;
     
     AudioComponentDescription cd;
     cd.componentManufacturer = kAudioUnitManufacturer_Apple;
@@ -47,7 +47,7 @@ OSStatus	CreateAUGraph (AUGraph* outGraph, AudioUnit* outSynth)
     cd.componentType = kAudioUnitType_Effect;
     cd.componentSubType = kAudioUnitSubType_PeakLimiter;
     
-    _rhs_require_noerr (result = AUGraphAddNode (*outGraph, &cd, &limiterNode), home);
+//    _rhs_require_noerr (result = AUGraphAddNode (*outGraph, &cd, &limiterNode), home);
     
     cd.componentType = kAudioUnitType_Output;
     cd.componentSubType = kAudioUnitSubType_DefaultOutput;
