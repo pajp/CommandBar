@@ -205,7 +205,7 @@ home:
     if (fraction > 1.0) fraction = 1.0;
     if (fraction < 0.0) fraction = 0.0;
     
-    int noteIndex = 42 * fraction - 1;
+    int noteIndex = 41 * fraction;
     NSLog(@"Fraction %f -> note index %d -> note %d (%c)", fraction, noteIndex, allNotes[noteIndex], charNotes[noteIndex]);
     [self playNote:allNotes[noteIndex]];
 }
