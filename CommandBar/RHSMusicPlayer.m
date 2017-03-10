@@ -77,35 +77,62 @@ enum {
 
 int majorscale[] = {0, 2, 4, 5, 7, 9, 11};
 char majorscale_char[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 0 };
-int allNotes[42];
-char charNotes[43];
-NSMutableDictionary* notesBeingPlayed;
-NSMutableSet* cancelledNoteOffs;;
+@interface RHSMusicPlayer()
+@property NSMutableDictionary* notesBeingPlayed;
+@property NSMutableSet* cancelledNoteOffs;
+@property NSDictionary* scales;
+@property NSMutableArray* allNotes;
+@end
 
 @implementation RHSMusicPlayer
 
+- (NSArray*) scale:(NSString*) scaleName forKey:(char) key {
+    int keyOffset = 0;
+    for (;keyOffset < sizeof(majorscale_char) && majorscale_char[keyOffset] == key; ++keyOffset);
+    keyOffset--;
+    NSArray* scaleReference = self.scales[scaleName];
+    NSMutableArray* scale = [[NSMutableArray alloc] initWithCapacity:scaleReference.count];
+    [scaleReference enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        scale[idx] = @( [scaleReference[idx] intValue] + keyOffset );
+    }];
+    NSLog(@"Scale %@ key %c: %@", scaleName, key, scale);
+    return scale;
+}
+
+- (void) setScale:(NSString*) scaleKey {
+    NSArray* keyAndScale = [scaleKey componentsSeparatedByString:@"-"];
+    NSString* keyString = keyAndScale[0];
+    const char* keyChars = [keyString cStringUsingEncoding:NSASCIIStringEncoding];
+    char key = keyChars[0];
+
+    // 6 octaves, 7 major notes per octave = 42 notes
+    // starting at 36th MIDI note (4th octave from 0)
+    NSArray* scale = [self scale:keyAndScale[1] forKey:key];
+    self.allNotes = [NSMutableArray arrayWithCapacity:scale.count*6];
+    for (int octave=0; octave < 6; octave++) {
+        for (int scaleNote=0; scaleNote < scale.count; scaleNote++) {
+            int noteIndex = octave * (int)scale.count + scaleNote;
+            int noteValue = [scale[scaleNote] intValue] + 12*octave + 36;
+            self.allNotes[noteIndex] = @(noteValue);
+            printf("\nNote index %2d, MIDI note %3d", noteIndex, noteValue);
+        }
+    }
+    printf("\n\n");
+
+    NSLog(@"Scale set to %@", scaleKey);
+}
 
 - (id) init {
     self = [super init];
-    notesBeingPlayed = [[NSMutableDictionary alloc] init];
-    cancelledNoteOffs = [[NSMutableSet alloc] init];
-    [self setupMidi];
+    self.notesBeingPlayed = [[NSMutableDictionary alloc] init];
+    self.cancelledNoteOffs = [[NSMutableSet alloc] init];
+    self.scales = @{ @"maj" : @[ @0, @2, @4, @5, @7, @9, @11 ],
+                     @"min" : @[ @0, @2, @3, @5, @7, @8, @10 ],
+                     @"blues" : @[ @0, @2, @3, @4, @5, @7, @9, @10, @11 ]
+                     };
 
-    // 6 octaves, 7 major notes per octave = 42 notes
-    // third octave = middle C, MIDI note 60
-    for (int octave=0; octave < 6; octave++) {
-        for (int majorNote=0; majorNote < 7; majorNote++) {
-            int noteIndex = octave*7+majorNote;
-            int noteValue = majorscale[majorNote] + 12*octave + 36;
-            allNotes[noteIndex] = noteValue;
-            charNotes[noteIndex] = majorscale_char[majorNote];
-            printf("\nNote index %2d, MIDI note %3d, pitch %c, scale note %d", noteIndex, noteValue, charNotes[noteIndex], majorNote);
-            printf("");
-            
-        }
-    }
-    charNotes[42] = 0;
-    printf("\n\n");
+    [self setupMidi];
+    [self setScale:@"c-maj"];
     fflush(stdout);
     return self;
 }
@@ -171,16 +198,21 @@ int notePlayCount;
     assert([NSThread isMainThread]);
     notePlayCount++;
     OSStatus result = 0;
-
+    NSMutableDictionary* notesBeingPlayed = self.notesBeingPlayed;
+    NSMutableSet* cancelledNoteOffs = self.cancelledNoteOffs;
     UInt32 onVelocity = 127;
     UInt32 noteOnCommand  = kMidiMessage_NoteOn << 4 | midiChannelInUse;
     UInt32 noteOffCommand = kMidiMessage_NoteOff << 4 | midiChannelInUse;
     
     NSLog (@"Playing Note: Status: 0x%X Note: %u, Vel: %u\n", (unsigned int)noteOnCommand, (unsigned int)noteNum, (unsigned int)onVelocity);
+    result = MusicDeviceMIDIEvent(synthUnit, noteOnCommand, noteNum, onVelocity, 0);
+    if (result != 0) {
+        NSLog(@"%s: OSStatus %d", __func__, result);
+        return;
+    }
     
-    _rhs_require_noerr (result = MusicDeviceMIDIEvent(synthUnit, noteOnCommand, noteNum, onVelocity, 0), home);
     
-    if (notesBeingPlayed[@(noteNum)] != nil) {
+    if (self.notesBeingPlayed[@(noteNum)] != nil) {
         [cancelledNoteOffs addObject:notesBeingPlayed[@(noteNum)]];
         NSLog(@"%s: will add cancellation for note-off for note %d count %d, cancelled by count %d", __func__, noteNum, [notesBeingPlayed[@(noteNum)] intValue], notePlayCount);
     }
@@ -202,12 +234,7 @@ int notePlayCount;
             NSLog(@"%s: OSStatus %d", __func__, result);
         }
         [notesBeingPlayed removeObjectForKey:@( noteNum )];
-    });
-home:
-    if (result != 0) {
-        NSLog(@"%s: OSStatus %d", __func__, result);
-    }
-    
+    });    
 }
 
 - (void) playMusic {
@@ -228,13 +255,13 @@ home:
 //    return result;
 }
 
-- (void) playMajorNoteFromFraction:(float) fraction {
+- (void) playScaleNoteFromFraction:(float) fraction {
     if (fraction > 1.0) fraction = 1.0;
     if (fraction < 0.0) fraction = 0.0;
     
     int noteIndex = 41 * fraction;
-    NSLog(@"Fraction %f -> note index %d -> note %d (%c)", fraction, noteIndex, allNotes[noteIndex], charNotes[noteIndex]);
-    [self playNote:allNotes[noteIndex]];
+    NSLog(@"Fraction %f -> note index %d -> note %d", fraction, noteIndex, [self.allNotes[noteIndex] intValue]);
+    [self playNote:[self.allNotes[noteIndex] intValue]];
 }
 
 - (void) dealloc {

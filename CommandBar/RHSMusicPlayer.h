@@ -11,6 +11,7 @@
 @interface RHSMusicPlayer : NSObject
 - (void) playMusic;
 - (void) playNote:(int) noteNum;
-- (void) playMajorNoteFromFraction:(float) fraction;
+- (void) playScaleNoteFromFraction:(float) fraction;
+- (void) setScale:(NSString*) scaleKey;
 @end
 

@@ -17,12 +17,16 @@
     return self;
 }
 
+NSString* commandBarIdentifier = @"nu.dll.CommandBar";
+NSString* switcherIdentifier = @"nu.dll.KeySwitcher";
+NSTouchBar* keySelectionTouchBar = nil;
+NSPopoverTouchBarItem* keySelectPopover = nil;
+
 - (NSTouchBar*) makeTouchBar {
-    NSString* commandBarIdentifier = @"nu.dll.CommandBar";
     NSTouchBar* touchBar = [[NSTouchBar alloc] init];
     touchBar.delegate = self;
     touchBar.customizationIdentifier = commandBarIdentifier;
-    touchBar.defaultItemIdentifiers = @[ commandBarIdentifier, NSTouchBarItemIdentifierOtherItemsProxy ];
+    touchBar.defaultItemIdentifiers = @[ commandBarIdentifier, switcherIdentifier, NSTouchBarItemIdentifierOtherItemsProxy ];
     touchBar.customizationAllowedItemIdentifiers = @[ commandBarIdentifier ];
     touchBar.principalItemIdentifier = commandBarIdentifier;
     return touchBar;
@@ -32,21 +36,44 @@
     [self.swipeView removeBalls];
 }
 
-- (NSTouchBarItem*) touchBar:(NSTouchBar *)touchBar makeItemForIdentifier:(NSTouchBarItemIdentifier)identifier {
+- (NSTouchBar*) makeKeySelectionTouchBar {
+    keySelectionTouchBar = [[NSTouchBar alloc] init];
+    keySelectionTouchBar.delegate = self;
+    keySelectionTouchBar.defaultItemIdentifiers = @[ @"c-maj", @"d-maj", @"d-min", @"e-maj", @"e-min", @"g-maj", @"c-blues" ];
+    //keySelectionTouchBar.principalItemIdentifier = keySelectionTouchBar.defaultItemIdentifiers[0];
+    return keySelectionTouchBar;
+}
+
+- (NSTouchBarItem*) makeSwitcherItem {
+    NSPopoverTouchBarItem* item = [[NSPopoverTouchBarItem alloc] initWithIdentifier:switcherIdentifier];
+    item.popoverTouchBar = [self makeKeySelectionTouchBar];
+    item.collapsedRepresentationLabel = @"🎹";
+    keySelectPopover = item;
+    return item;
+}
+
+- (void) performKeyChange:(NSButton*) sender {
+    NSLog(@"Should change key to: %@", sender.title);
+    [self.musicPlayer setScale:sender.title];
+    [keySelectPopover dismissPopover:sender];
+}
+
+- (NSTouchBarItem*) makeKeySelectionTouchBarItemForIdentifier:(NSTouchBarItemIdentifier)identifier {
     NSCustomTouchBarItem* item = [[NSCustomTouchBarItem alloc] initWithIdentifier:identifier];
-    /*
-    NSButton* button = [NSButton buttonWithTitle:@"EHLO world" target:nil action:@selector(boo)];
-    button.bezelColor = [NSColor greenColor];
-    NSDictionary *attributesDictionary =
-    @{
-           NSForegroundColorAttributeName : [NSColor redColor],
-           NSFontAttributeName : [NSFont fontWithName:@"American Typewriter" size:15.0],
-           };
-    NSMutableAttributedString *attributedString =
-    [[NSMutableAttributedString alloc] initWithString:button.title attributes:attributesDictionary];
-    [attributedString setAlignment:NSTextAlignmentCenter range:NSMakeRange(0, attributedString.length)];
-    button.attributedTitle = attributedString;
-    */
+    NSButton* keyButton = [NSButton buttonWithTitle:identifier target:self action:@selector(performKeyChange:)];
+    
+    item.view = keyButton;
+    return item;
+}
+
+- (NSTouchBarItem*) touchBar:(NSTouchBar *)touchBar makeItemForIdentifier:(NSTouchBarItemIdentifier)identifier {
+    if (touchBar == keySelectionTouchBar) {
+        return [self makeKeySelectionTouchBarItemForIdentifier:identifier];
+    }
+    if ([identifier isEqualToString:switcherIdentifier]) {
+        return [self makeSwitcherItem];
+    }
+    NSCustomTouchBarItem* item = [[NSCustomTouchBarItem alloc] initWithIdentifier:identifier];
     self.swipeView = [[RHSSwipeView alloc] init];
     item.view = self.swipeView;
     self.swipeView.wantsLayer = YES;
@@ -72,9 +99,9 @@
 }
 
 - (void)playNoteAt:(float) fraction1 andThen:(float) fraction2 {
-    [self.musicPlayer playMajorNoteFromFraction:fraction1];
+    [self.musicPlayer playScaleNoteFromFraction:fraction1];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self.musicPlayer playMajorNoteFromFraction:fraction2];
+        [self.musicPlayer playScaleNoteFromFraction:fraction2];
         
     });
 }
