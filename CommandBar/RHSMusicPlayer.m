@@ -151,38 +151,9 @@ UInt8 midiChannelInUse = 0; //we're using midi channel 1...
 
 - (OSStatus) setupMidi {
     OSStatus result;
-#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
-    char* bankPath = 0;
-#endif
-    
-    // this is the only option to main that we have...
-    // just the full path of the sample bank...
-    
-    // On OS X there are known places were sample banks can be stored
-    // Library/Audio/Sounds/Banks - so you could scan this directory and give the user options
-    // about which sample bank to use...
-    //    if (argc > 1)
-    //        bankPath = const_cast<char*>(argv[1]);
-    
+
     _rhs_require_noerr (result = CreateAUGraph (&graph, &synthUnit), home);
 
-#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
-    // if the user supplies a sound bank, we'll set that before we initialize and start playing
-    if (bankPath)
-    {
-        FSRef fsRef;
-        _rhs_require_noerr (result = FSPathMakeRef ((const UInt8*)bankPath, &fsRef, 0), home);
-        
-        printf ("Setting Sound Bank:%s\n", bankPath);
-        
-        _rhs_require_noerr (result = AudioUnitSetProperty (synthUnit,
-                                                           kMusicDeviceProperty_SoundBankFSRef,
-                                                           kAudioUnitScope_Global, 0,
-                                                           &fsRef, sizeof(fsRef)), home);
-        
-    }
-#endif
-    
     // ok we're set up to go - initialize and start the graph
     _rhs_require_noerr (result = AUGraphInitialize (graph), home);
     
