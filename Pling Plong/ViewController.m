@@ -7,16 +7,17 @@
 //
 
 #import "ViewController.h"
+#import "RHSMusicPlayer.h"
 
 @interface ViewController ()
-
+@property RHSMusicPlayer* musicPlayer;
 @end
 
 @implementation ViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
+    self.musicPlayer = [RHSMusicPlayer new];
 }
 
 
@@ -25,5 +26,9 @@
     // Dispose of any resources that can be recreated.
 }
 
+- (IBAction)floof:(id)sender {
+    NSLog(@"hello…");
+    [self.musicPlayer playMusic];
+}
 
 @end

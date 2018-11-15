@@ -10,7 +10,9 @@
 #import "RHSMusicPlayer.h"
 
 
+#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
 #include <CoreServices/CoreServices.h> //for file stuff
+#endif
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h> //for AUGraph
 #include <unistd.h> // used for usleep...
@@ -40,7 +42,11 @@ OSStatus	CreateAUGraph (AUGraph* outGraph, AudioUnit* outSynth)
     _rhs_require_noerr (result = NewAUGraph (outGraph), home);
     
     cd.componentType = kAudioUnitType_MusicDevice;
+#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
     cd.componentSubType = kAudioUnitSubType_DLSSynth;
+#else
+    cd.componentSubType = kAudioUnitSubType_RemoteIO;
+#endif
     
     _rhs_require_noerr (result = AUGraphAddNode (*outGraph, &cd, &synthNode), home);
     
@@ -50,7 +56,11 @@ OSStatus	CreateAUGraph (AUGraph* outGraph, AudioUnit* outSynth)
 //    _rhs_require_noerr (result = AUGraphAddNode (*outGraph, &cd, &limiterNode), home);
     
     cd.componentType = kAudioUnitType_Output;
+#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
     cd.componentSubType = kAudioUnitSubType_DefaultOutput;
+#else
+    cd.componentSubType = kAudioUnitSubType_GenericOutput;
+#endif
     _rhs_require_noerr (result = AUGraphAddNode (*outGraph, &cd, &outNode), home);
     
     _rhs_require_noerr (result = AUGraphOpen (*outGraph), home);
@@ -141,8 +151,9 @@ UInt8 midiChannelInUse = 0; //we're using midi channel 1...
 
 - (OSStatus) setupMidi {
     OSStatus result;
+#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
     char* bankPath = 0;
-    
+#endif
     
     // this is the only option to main that we have...
     // just the full path of the sample bank...
@@ -154,7 +165,8 @@ UInt8 midiChannelInUse = 0; //we're using midi channel 1...
     //        bankPath = const_cast<char*>(argv[1]);
     
     _rhs_require_noerr (result = CreateAUGraph (&graph, &synthUnit), home);
-    
+
+#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
     // if the user supplies a sound bank, we'll set that before we initialize and start playing
     if (bankPath)
     {
@@ -169,6 +181,7 @@ UInt8 midiChannelInUse = 0; //we're using midi channel 1...
                                                            &fsRef, sizeof(fsRef)), home);
         
     }
+#endif
     
     // ok we're set up to go - initialize and start the graph
     _rhs_require_noerr (result = AUGraphInitialize (graph), home);
