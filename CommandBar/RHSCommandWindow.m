@@ -18,6 +18,12 @@ NSArray* scales;
     self.musicPlayer = [RHSMusicPlayer new];
     keys = @[ @"c", @"d", @"e", @"f", @"g", @"a", @"b" ];
     scales = self.musicPlayer.scales.allKeys;
+
+    NSPressGestureRecognizer* pressGuestureForWindow = [[NSPressGestureRecognizer alloc] initWithTarget:self action:@selector(windowGestureAction:)];
+    pressGuestureForWindow.minimumPressDuration = 0;
+    self.contentView.allowedTouchTypes = NSTouchTypeDirect;
+    [self.contentView addGestureRecognizer:pressGuestureForWindow];
+
     return self;
 }
 
@@ -186,10 +192,6 @@ NSScrubber* scaleSelectScrubber;
     pressGesture.minimumPressDuration = 0;
     pressGesture.allowedTouchTypes = NSTouchTypeMaskDirect;
     [item.view addGestureRecognizer:pressGesture];
-    
-    NSPressGestureRecognizer* pressGuestureForWindow = [[NSPressGestureRecognizer alloc] initWithTarget:self action:@selector(windowGestureAction:)];
-    pressGuestureForWindow.minimumPressDuration = 0;
-    [self.contentView addGestureRecognizer:pressGuestureForWindow];
     
     return item;
 }

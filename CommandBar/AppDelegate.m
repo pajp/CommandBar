@@ -18,7 +18,7 @@
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-
+    [self.window updateSegmentCount];
 }
 
 

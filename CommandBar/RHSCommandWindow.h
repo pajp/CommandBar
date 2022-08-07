@@ -14,4 +14,5 @@
 @property RHSSwipeView* swipeView;
 @property (weak) IBOutlet RHSSwipeView *swipeViewOnScreen;
 @property RHSMusicPlayer* musicPlayer;
+- (void) updateSegmentCount;
 @end
